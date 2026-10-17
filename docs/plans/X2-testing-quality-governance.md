@@ -85,11 +85,13 @@ forbidden_modules = sd_contracts sd_features sd_labeling sd_models sd_backtest s
 
 | Test | Rule |
 |---|---|
-| `test_no_order_code` | Repo-wide grep (excluding `docs/` and this test) for `order_send\|order_check` → must be empty. Also asserts the `sd_gateway.mt5_client` allowlist contains only read-only functions |
+| `test_no_order_code` | Repo-wide grep (excluding `docs/`, `CLAUDE.md`, `.claude/` and `tests/structural/`, which describe the ban) for `order_send\|order_check` → must be empty. Also asserts the `sd_gateway.mt5_client` allowlist contains only read-only functions |
 | `test_advisor_deliberate_only` | AST-scan every `.py`. Only `apps/backend/advisor/{api,views,services}.py` may import `sd_advisor.client`, `sd_advisor.request` or `anthropic`. **Explicitly fails** for any `*/tasks.py`, `*/management/commands/*`, `config/celery.py`, `sd_gateway/*`, `sd_fm/*`, Prefect flows |
 | `test_no_secrets_to_browser` | `apps/web` contains no `NEXT_PUBLIC_*KEY*`/`*SECRET*`/`ANTHROPIC*` references. `.env.example` has no real values |
 | `test_packet_has_no_account_identifiers` | Packet built from fixtures where account_info includes login/server/name contains none of them (also X1-WP07) |
 | `test_gateway_no_django` | Covered by import-linter, plus a grep for `django` in `apps/gateway` |
+
+**Edit-time mirror:** `.claude/hooks/guard_invariants.py` (a Claude Code PreToolUse hook, tested by `tests/structural/test_claude_hooks.py`) blocks the same violations while Claude edits files. It is a fast first layer only. These CI tests remain authoritative, and the two must be kept in sync when a rule changes.
 
 ### 4.3 Leakage suite (P3, master "Leakage tests")
 

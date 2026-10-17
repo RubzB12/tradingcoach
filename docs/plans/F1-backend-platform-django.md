@@ -164,7 +164,7 @@ On Windows, the real gateway runs **natively** and connects to `localhost:6379` 
 
 | ID | Task | Est. h | Pri | Depends on | Acceptance criteria |
 |---|---|---|---|---|---|
-| F1-WP01 | **Repo + toolchain bootstrap:** git init, `.gitignore`, uv workspace root, pnpm workspace, ruff/pyright config incl. banned-api, pre-commit, `.env.example`, `.editorconfig` | 3 | M | P0 done | `uv sync` and `pnpm i` succeed on a clean clone, and `pre-commit run -a` passes |
+| F1-WP01 | **Repo + toolchain bootstrap:** git init, `.gitignore` (both already done with the Claude setup in `chore/claude-setup`; extend as needed), uv workspace root, pnpm workspace, ruff/pyright config incl. banned-api, pre-commit, `.env.example`, `.editorconfig` | 3 | M | P0 done | `uv sync` and `pnpm i` succeed on a clean clone, and `pre-commit run -a` passes |
 | F1-WP02 | **docker-compose infrastructure:** `db` (Timescale, init script creating 3 DBs + extension), `redis` (AOF), `mlflow`, named volumes, healthchecks | 3 | M | WP01 | `just up` brings all three services to healthy, and the MLflow UI loads at :5000 |
 | F1-WP03 | **Django skeleton:** `apps/backend`, split settings, `core` app, `UserSettings` singleton + admin, superuser bootstrap command `ensure_admin` | 3 | M | WP02 | `manage.py check --deploy` (dev-relaxed) passes and admin shows `UserSettings` |
 | F1-WP04 | **ASGI + Channels:** `config/asgi.py` ProtocolTypeRouter, `channels-redis` layer, `realtime` app, `DashboardConsumer` with subscribe/unsubscribe/ping and envelope validation via `sd_contracts` | 3 | M | WP03 | A WS client can connect, subscribe and receive a test `group_send`, and an invalid op gets an error frame |

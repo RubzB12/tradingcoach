@@ -5,7 +5,7 @@ Status of every work package (WP) in [docs/plans](README.md), grouped by the pha
 ## How to update
 
 - **Status values:** `todo` · `doing` · `done` · `blocked` · `deferred` (moved to a later phase, note where).
-- When you start a WP: set `doing` and fill in **Started**. When its acceptance criteria pass: set `done`, fill in **Done** and **Actual h**, and add the commit/PR in **Notes**.
+- When you start a WP: set `doing` and fill in **Started**. When its acceptance criteria pass: set `done`, fill in **Done** and **Actual h**, and put the WP branch name in **Notes**. `/wp-start` and `/wp-done` do this for you.
 - When every `M` WP in a phase is `done` and the exit checks pass, tick the phase's exit box and update the summary table.
 - With Claude Code: *"Implement P1-WP02 and update docs/plans/TRACKER.md when done."*
 
@@ -47,7 +47,7 @@ Status of every work package (WP) in [docs/plans](README.md), grouped by the pha
 
 | ID | Task | Pri | Est h | Actual h | Depends on | Status | Started | Done | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| [F1-WP01](F1-backend-platform-django.md#5-work-packages) | Repo + toolchain bootstrap | M | 3 |  | P0 done | todo |  |  |  |
+| [F1-WP01](F1-backend-platform-django.md#5-work-packages) | Repo + toolchain bootstrap | M | 3 |  | P0 done | todo |  |  | git init + .gitignore done early (chore/claude-setup) |
 | [F1-WP02](F1-backend-platform-django.md#5-work-packages) | docker-compose infrastructure | M | 3 |  | F1-WP01 | todo |  |  |  |
 | [F1-WP03](F1-backend-platform-django.md#5-work-packages) | Django skeleton | M | 3 |  | F1-WP02 | todo |  |  |  |
 | [F1-WP04](F1-backend-platform-django.md#5-work-packages) | ASGI + Channels | M | 3 |  | F1-WP03 | todo |  |  |  |

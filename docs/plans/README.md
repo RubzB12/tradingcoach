@@ -33,7 +33,7 @@ These sub-plans turn the master plan (**`SignalDeck_Project_Plan.pdf`, Rev 2, 17
   7. Exit criteria (master wording copied exactly + measurable checks)
   8. Risks
   9. Verify-at-build-time
-- When starting a WP with Claude Code, point it at the plan file and the WP ID (e.g. *"Implement P1-WP02 from docs/plans/P1-data-and-live-charts.md"*). Afterwards, update [TRACKER.md](TRACKER.md).
+- With Claude Code, run **`/wp-start <WP-ID>`**. It loads the plan and acceptance criteria, checks dependencies, creates the `wp/` branch and marks the WP `doing`. Then implement. Then run **`/wp-done`**, which verifies each criterion with evidence, runs the matching reviewer subagent, updates [TRACKER.md](TRACKER.md) and commits. At a phase boundary, run `/phase-review <P#>`, and before fast-moving work, run `/verify-build <plan>`. The project's Claude setup (CLAUDE.md, `.claude/rules/`, hooks, skills, agents) is described in the root `CLAUDE.md`.
 - Each phase plan has a **phase budget** table that includes the foundation and cross-cutting WPs scheduled in that phase.
 
 ## Before you start
