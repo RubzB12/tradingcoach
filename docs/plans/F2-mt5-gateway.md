@@ -117,7 +117,7 @@ Live-state keys are also written: `last_tick:{SYMBOL}` (hash) and `gateway:healt
 
 - It exposes the same function names and return shapes (namedtuple-like objects and numpy structured arrays) as `MetaTrader5`: `initialize, shutdown, last_error, symbol_info, symbol_info_tick, symbols_get, symbol_select, copy_ticks_from, copy_rates_from_pos, copy_rates_range, account_info, positions_get, history_deals_get`.
 - It replays ticks from `data/recordings/{SYMBOL}/*.parquet` (captured in P0-WP07) at 1× or N× speed. Rates are derived from the replayed ticks.
-- Fault injection options: `FAKE_FAIL_RATE`, `FAKE_IPC_TIMEOUT_EVERY`. These let the supervisor be tested on CI and macOS.
+- Fault injection options: `FAKE_FAIL_RATE`, `FAKE_IPC_TIMEOUT_EVERY`. These let the supervisor be tested without a terminal, including on macOS.
 
 ### 4.7 No-order enforcement (master: "Make 'no execution' structural")
 
@@ -141,7 +141,7 @@ If you later move to a Mac, the gateway runs on a small Windows box or VM and po
 | F2-WP03 | **Back-fill + bars:** `copy_ticks_from` back-fill with dedupe, in-progress M1 bars, close-time reconcile from `copy_rates_from_pos`, H4/D1 boundary handling, broker-offset detection | 3.5 | M | WP02 | Over 1 h, published final M1 bars equal MT5's bars exactly (comparison script), and no duplicate ticks appear |
 | F2-WP04 | **History service:** `gateway.requests` consumer group, chunked `copy_rates_range` / `copy_ticks_range` (≤ 50k rows/chunk), responses with TTL, "Max bars in chart" truncation surfaced as a `truncated` flag | 2.5 | M | WP02 | Requesting 1 year of M1 for EURUSD returns all rows the terminal has, in chunks, without stalling tick polling (poll lag p99 < 500 ms during the request) |
 | F2-WP05 | **Symbol catalog:** `symbols_get(group=…)` search command, `symbol_select` for watched symbols, `symbols.snapshot` publishing on start, hourly and on change; watchlist read from `gateway:watchlist` | 2 | M | WP02 | Adding a symbol to `gateway:watchlist` starts its tick stream within 5 s |
-| F2-WP06 | **Fake MT5:** `fake_mt5.py` with Parquet replay, speed factor and fault injection; `--impl fake` CLI flag; compose service `fake-gateway` (profiles `ci`, `offline`) | 2.5 | M | WP01–WP05 | The full stack runs in Docker with no terminal, and an injected `-10005` triggers a reconnect and back-fill |
+| F2-WP06 | **Fake MT5:** `fake_mt5.py` with Parquet replay, speed factor and fault injection; `--impl fake` CLI flag; compose service `fake-gateway` (profile `offline`) | 2.5 | M | WP01–WP05 | The full stack runs in Docker with no terminal, and an injected `-10005` triggers a reconnect and back-fill |
 | F2-WP07 | **Windows autostart + runbook:** Task Scheduler "at logon" task (same user and privilege as the terminal) or NSSM service; restart on failure; log location; runbook section | 1 | S | WP01 | After a reboot, the gateway reconnects on its own within 2 min of the terminal starting |
 | F2-WP08 | **No-order enforcement:** allowlist wrapper test, ruff banned-api config, contribution to the X2 grep test | 1 | M | WP01 | Adding `mt5.order_send` anywhere fails lint and tests |
 | F2-WP09 | **Read-only account reader:** `kind: account` requests returning `account_info` (balance, equity, leverage, currency, margin mode; **login/server/name stripped**), `positions_get(symbol)`, `history_deals_get(range)` | 2 | M | WP04 | Ask Claude's account context (X1-WP02) and manual-fill linking (P2-WP09) can request it, and a test asserts no login/server/name fields appear in the output |

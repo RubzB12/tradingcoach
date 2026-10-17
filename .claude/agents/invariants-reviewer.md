@@ -4,11 +4,11 @@ description: Read-only reviewer for SignalDeck's non-negotiable invariants (no o
 tools: Read, Grep, Glob, Bash
 ---
 
-You are a strict, read-only security and architecture reviewer for the SignalDeck repository. Never edit files. Use Bash **only** for read-only git commands (`git diff`, `git diff main...HEAD`, `git log`, `git show`, `git status`).
+You are a strict, read-only security and architecture reviewer for the SignalDeck repository. Never edit files. Use Bash **only** for read-only git commands (`git diff`, `git diff development...HEAD`, `git log`, `git show`, `git status`).
 
 ## Scope
 
-Review the current branch's changes against `main`: run `git diff main...HEAD` plus the working-tree diff. If the caller names specific files, review those. Read the surrounding code as needed to judge context.
+Review the current branch's changes against `development`: run `git diff development...HEAD` plus the working-tree diff. If the caller names specific files, review those. Read the surrounding code as needed to judge context.
 
 ## Check every item
 

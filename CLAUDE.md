@@ -8,7 +8,7 @@ A personal, educational MT5 signal engine. It reads market data from a MetaTrade
 
 ## Non-negotiable invariants
 
-Hooks (`.claude/hooks/guard_invariants.py`) block violations at edit time, and CI tests (X2-WP02) block them again. Never work around either. If one gets in the way, stop and ask.
+Hooks (`.claude/hooks/guard_invariants.py`) block violations at edit time, and the structural tests run by `just check` and the pre-push hook (X2-WP02/WP03) block them again. Never work around either. If one gets in the way, stop and ask.
 
 1. **No order code.** Never use `order_send` or `order_check`, in any form. `MetaTrader5` is imported only inside `apps/gateway/`: in production via `sd_gateway/mt5_client.py` (a read-only allowlist), and in the throwaway P0 spike in `apps/gateway/spike/`.
 2. **Boundaries.** `apps/gateway` and `packages/sd_*` never import Django or Django apps. `research/` is never imported by app code.
@@ -52,7 +52,10 @@ The `just` targets exist from F1-WP09 onward. Before that (P0), use `apps/gatewa
 | Frontend | `just web` (`pnpm --filter web dev`) |
 | Gateway (native) | `just gateway` |
 | Migrations | `just migrate` |
+| **Quality gate** (lint + structural + unit + contract drift, < 2 min) | `just check`. Until X2-WP03 exists: `python -m unittest discover -s tests/structural` |
 | Tests / lint / format | `just test` · `just lint` · `just fmt` |
+| Heavier suites (run locally) | `just test-db` · `just test-integration` · `just test-leakage` · `just test-e2e` |
+| Enable the git pre-push hook | `just hooks` (= `git config core.hooksPath .githooks`; already set in this clone) |
 | Regenerate TS contracts | `just contracts` — run after **any** `sd_contracts` or Ninja schema change |
 | Install deps | `uv sync` · `pnpm install` |
 
@@ -67,10 +70,13 @@ The `just` targets exist from F1-WP09 onward. Before that (P0), use `apps/gatewa
 
 ## Git
 
-- Branches are named `wp/<WP-ID>-<short-slug>` (e.g. `wp/P1-WP02-ingest-streams`), or `chore/<slug>` for non-WP work.
+- **`development` is the integration branch; all work lands there.** `main` holds verified, phase-complete states and is updated only at phase boundaries via `/phase-review`.
+- **Never commit directly on `development` or `main`** (the guard hook blocks it). Cut a branch from `development`: `wp/<WP-ID>-<short-slug>` (e.g. `wp/P1-WP02-ingest-streams`), or `chore/<slug>` for non-WP work.
 - Use small conventional commits that include the WP ID: `feat(P1-WP02): batch COPY upsert in ingest_streams`.
-- **Never** push, merge, rebase, reset, force-push or delete branches without asking first.
+- Landing a branch: after `/wp-done` passes and the user approves, merge into `development` with `git merge --no-ff` (message `merge(<WP-ID>): <summary>`), then push `development` only when asked.
+- **Never** push, merge, rebase, reset, force-push or delete branches without asking first. **Never** use `--no-verify`.
 - Never commit `.env`, `data/` or recordings outside `tests/fixtures/`.
+- **No GitHub Actions** (no minutes left): do not create `.github/workflows`. The quality gate is `just check` plus the `.githooks/pre-push` hook. Rationale and how to re-enable: `docs/decisions/0002-branching-and-local-quality-gate.md`.
 
 ## Conventions
 

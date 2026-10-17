@@ -193,7 +193,7 @@ Measurable checks:
 - [ ] For ≥ 1 symbol group × tf: walk-forward OOS expectancy > 0 R at **1.5× costs** with ≥ 100 OOS trades, DSR reported, PBO < 0.5. **Or** `p3-walkforward.md` documents the negative result, covering what was tried, trial counts, and why it fails.
 - [ ] Champion registered per group with MLflow run, WF report, calibration plot and cost sensitivity (master: model governance).
 - [ ] Every model signal in the ledger has a SignalExplanation; the waterfall, gauge, stepper and regime overlay work live.
-- [ ] Leakage suite green in CI.
+- [ ] `just test-leakage` green (local gate; there is no GitHub CI).
 - [ ] Master deliverables present: champion model per symbol group, explanation packets, Claude-vs-model agreement panel (X1-WP11).
 
 ## 8. Risks and mitigations

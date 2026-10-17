@@ -13,7 +13,7 @@ allowed-tools: Read, Grep, Glob, Edit, Bash(git status *), Bash(git status), Bas
    - If any `M` WP isn't `done`, list them and stop. The phase isn't ready. `S` WPs that aren't done must be `deferred`, with the target phase noted, and you need the user's agreement for each.
 
 2. **Exit criteria.**
-   - Open the phase plan (`docs/plans/$ARGUMENTS-*.md`) §7. For each master exit criterion and each measurable check, collect evidence: reports in `docs/reports/`, test or CI results, measurements.
+   - Open the phase plan (`docs/plans/$ARGUMENTS-*.md`) §7. For each master exit criterion and each measurable check, collect evidence: reports in `docs/reports/`, `just check` and other local test results, measurements. There is no GitHub CI.
    - Run any cheap verification commands needed.
    - Present a table: `Check | Evidence | PASS/FAIL/PENDING`. Don't mark the phase met unless every check passes.
 
@@ -32,4 +32,10 @@ allowed-tools: Read, Grep, Glob, Edit, Bash(git status *), Bash(git status), Bas
 
 6. **Re-estimate.** Compare actual vs estimated hours for the phase and suggest an adjustment factor for the remaining phases' estimates. Don't edit the estimates without approval.
 
-7. **Commit** the tracker, CLAUDE.md and approved rule changes on a `chore/phase-review-$ARGUMENTS` branch with `docs(phase): close $ARGUMENTS`. Don't merge or push without asking.
+7. **Commit** the tracker, CLAUDE.md and approved rule changes on a `chore/phase-review-$ARGUMENTS` branch, **cut from `development`**, with `docs(phase): close $ARGUMENTS`. Commits on `development` itself are blocked. Don't merge or push without asking.
+
+8. **Promote to `main` (phase boundaries only, each step with the user's approval).**
+   - First merge the `chore/phase-review-$ARGUMENTS` branch into `development` with `git merge --no-ff`, and run `just check` on `development`.
+   - Then propose promoting: `git switch main`, `git merge --no-ff development -m "release($ARGUMENTS): phase complete"` (with the attribution trailer), and `git push origin main` and `git push origin development` (the pre-push gate runs, and never use `--no-verify`).
+   - Optionally offer an annotated tag `phase-$ARGUMENTS-complete` (`git tag -a`), pushed only if the user asks.
+   - Finish by switching back to `development`. `main` is never committed to directly, and is only ever changed by this merge.

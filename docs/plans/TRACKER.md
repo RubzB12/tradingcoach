@@ -5,7 +5,7 @@ Status of every work package (WP) in [docs/plans](README.md), grouped by the pha
 ## How to update
 
 - **Status values:** `todo` · `doing` · `done` · `blocked` · `deferred` (moved to a later phase, note where).
-- When you start a WP: set `doing` and fill in **Started**. When its acceptance criteria pass: set `done`, fill in **Done** and **Actual h**, and put the WP branch name in **Notes**. `/wp-start` and `/wp-done` do this for you.
+- When you start a WP: set `doing` and fill in **Started**. When its acceptance criteria pass: set `done`, fill in **Done** and **Actual h**, and put the WP branch name in **Notes**. `/wp-start` and `/wp-done` do this for you. Branches are cut from and merged into `development`.
 - When every `M` WP in a phase is `done` and the exit checks pass, tick the phase's exit box and update the summary table.
 - With Claude Code: *"Implement P1-WP02 and update docs/plans/TRACKER.md when done."*
 
@@ -74,7 +74,7 @@ Status of every work package (WP) in [docs/plans](README.md), grouped by the pha
 | [F3-WP08](F3-frontend-platform-nextjs.md#5-work-packages) | Frontend test setup | S | 2 |  | F3-WP01 | todo |  |  |  |
 | [X2-WP01](X2-testing-quality-governance.md#5-work-packages) | Test harness | M | 2 |  | F1-WP03 | todo |  |  |  |
 | [X2-WP02](X2-testing-quality-governance.md#5-work-packages) | Structural contracts | M | 2 |  | F1-WP01 | todo |  |  |  |
-| [X2-WP03](X2-testing-quality-governance.md#5-work-packages) | CI workflow `ci.yml` | M | 3 |  | X2-WP01, X2-WP02 | todo |  |  |  |
+| [X2-WP03](X2-testing-quality-governance.md#5-work-packages) | Local quality gate (`just check`, pre-push hook; no CI) | M | 3 |  | X2-WP01, X2-WP02 | todo |  |  |  |
 | [X2-WP04](X2-testing-quality-governance.md#5-work-packages) | Contract + WS tests | S | 2 |  | F1-WP08, F1-WP04 | todo |  |  |  |
 | [X2-WP05](X2-testing-quality-governance.md#5-work-packages) | Recorded fixtures | S | 2 |  | P0-WP07, F2-WP06 | todo |  |  |  |
 | [P1-WP01](P1-data-and-live-charts.md#5-work-packages) | marketdata models + migrations | M | 3 |  | F1-WP07 | todo |  |  |  |
@@ -100,7 +100,7 @@ Status of every work package (WP) in [docs/plans](README.md), grouped by the pha
 |---|---|---|---|---|---|---|---|---|---|
 | [F1-WP10](F1-backend-platform-django.md#5-work-packages) | Structured logging | S | 1.5 |  | F1-WP03 | todo |  |  |  |
 | [F2-WP09](F2-mt5-gateway.md#5-work-packages) | Read-only account reader | M | 2 |  | F2-WP04 | todo |  |  |  |
-| [X2-WP06](X2-testing-quality-governance.md#5-work-packages) | Integration job | M | 4 |  | X2-WP05, P2-WP08 | todo |  |  |  |
+| [X2-WP06](X2-testing-quality-governance.md#5-work-packages) | Integration suite, run locally | M | 4 |  | X2-WP05, P2-WP08 | todo |  |  |  |
 | [X2-WP07](X2-testing-quality-governance.md#5-work-packages) | Playwright E2E + visual regression | M | 3 |  | X2-WP06, P2-WP10 | todo |  |  |  |
 | [P2-WP01](P2-indicator-signals-backtesting.md#5-work-packages) | `sd_features` v1 | M | 4 |  | P1 | todo |  |  |  |
 | [P2-WP02](P2-indicator-signals-backtesting.md#5-work-packages) | Rule strategies | M | 4 |  | P2-WP01 | todo |  |  |  |
@@ -133,7 +133,7 @@ Status of every work package (WP) in [docs/plans](README.md), grouped by the pha
 
 | ID | Task | Pri | Est h | Actual h | Depends on | Status | Started | Done | Notes |
 |---|---|---|---|---|---|---|---|---|---|
-| [X2-WP08](X2-testing-quality-governance.md#5-work-packages) | Leakage suite | M | 4 |  | P3-WP01, P3-WP05, P3-WP09 | todo |  |  |  |
+| [X2-WP08](X2-testing-quality-governance.md#5-work-packages) | Leakage suite (`just test-leakage`) | M | 4 |  | P3-WP01, P3-WP05, P3-WP09 | todo |  |  |  |
 | [X2-WP09](X2-testing-quality-governance.md#5-work-packages) | Promotion gate | M | 3 |  | P3-WP11, P3-WP13 | todo |  |  |  |
 | [P3-WP01](P3-ml-and-explainability.md#5-work-packages) | Feature set v2 | M | 8 |  | P2-WP01 | todo |  |  |  |
 | [P3-WP02](P3-ml-and-explainability.md#5-work-packages) | Triple-barrier labels | M | 4 |  | P3-WP01 | todo |  |  |  |

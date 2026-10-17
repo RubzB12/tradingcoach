@@ -11,11 +11,11 @@ The two most important properties of SignalDeck are **structural**:
 - it can never place orders
 - it can never call Claude on its own
 
-Its value also depends on **honest validation**: no leakage, and no overfitting dressed up as edge. This plan makes those properties testable and enforced in CI. It also defines the test harness (fake MT5, fake Anthropic, recorded data) so the whole stack runs on CI and on a machine without an MT5 terminal.
+Its value also depends on **honest validation**: no leakage, and no overfitting dressed up as edge. This plan makes those properties testable and enforced by a **local quality gate** (`just check` plus a git `pre-push` hook). **There is no GitHub CI**: no Actions minutes are available, so the gate runs on this machine (decision: [ADR 0002](../decisions/0002-branching-and-local-quality-gate.md)). The original GitHub Actions workflow designs are kept in [Appendix A](#appendix-a--deferred-github-actions-workflows) for when minutes are available. This plan also defines the test harness (fake MT5, fake Anthropic, recorded data) so the whole stack runs on a machine without an MT5 terminal.
 
 ## 2. Scope
 
-**In:** test layout and tooling, structural contracts (import-linter + AST/grep tests), CI workflows, contract/WS tests, recorded fixtures, the integration job, Playwright + visual regression, the leakage suite, and the model promotion gate.
+**In:** test layout and tooling, structural contracts (import-linter + AST/grep tests), the local quality gate (`just check`, pre-push hook, `just test-*` targets), contract/WS tests, recorded fixtures, the integration job, Playwright + visual regression, the leakage suite, and the model promotion gate.
 
 **Out:** feature-specific unit tests, which live with each WP. The advisor test cases are listed here but built in [X1-WP07/WP19](X1-ask-claude-advisor.md#5-work-packages).
 
@@ -33,19 +33,19 @@ Its value also depends on **honest validation**: no leakage, and no overfitting 
 |---|---|---|
 | Python unit | pytest, hypothesis, pytest-django, factory-boy, freezegun/time-machine | `packages/*/tests`, `apps/*/tests` |
 | Async/Channels | pytest-asyncio, `channels.testing.WebsocketCommunicator` | `apps/backend/realtime/tests` |
-| DB | Real TimescaleDB service container (no SQLite: hypertables + continuous aggregates) | CI service `db` |
+| DB | Real TimescaleDB container (no SQLite: hypertables + continuous aggregates) | compose service `db`, run via `just test-db` |
 | Cross-cutting | Structural tests, integration | `tests/` |
 | Frontend unit | Vitest + Testing Library + MSW | `apps/web/**/*.test.ts(x)` |
 | E2E | Playwright against compose profile `offline` (fake gateway) | `apps/web/e2e` |
 | Visual regression | Playwright screenshots on fixed fixtures | `apps/web/e2e/visual` |
-| Lint/types | ruff, pyright, eslint, `tsc --noEmit` | CI |
+| Lint/types | ruff, pyright, eslint, `tsc --noEmit` | `just check` |
 
 **Markers:**
 - `unit` (default)
 - `db`
 - `integration` (compose)
-- `live_mt5` (manual, never in CI)
-- `live_claude` (manual, spends money, never in CI)
+- `live_mt5` (manual, never in `just check`)
+- `live_claude` (manual, spends money, never in `just check`)
 
 ### 4.2 Structural contracts
 
@@ -91,7 +91,7 @@ forbidden_modules = sd_contracts sd_features sd_labeling sd_models sd_backtest s
 | `test_packet_has_no_account_identifiers` | Packet built from fixtures where account_info includes login/server/name contains none of them (also X1-WP07) |
 | `test_gateway_no_django` | Covered by import-linter, plus a grep for `django` in `apps/gateway` |
 
-**Edit-time mirror:** `.claude/hooks/guard_invariants.py` (a Claude Code PreToolUse hook, tested by `tests/structural/test_claude_hooks.py`) blocks the same violations while Claude edits files. It is a fast first layer only. These CI tests remain authoritative, and the two must be kept in sync when a rule changes.
+**Edit-time mirror:** `.claude/hooks/guard_invariants.py` (a Claude Code PreToolUse hook, tested by `tests/structural/test_claude_hooks.py`) blocks the same violations while Claude edits files. It is a fast first layer only. These tests (run by `just check` and the pre-push hook) remain authoritative, and the two must be kept in sync when a rule changes. The same hook also blocks `git commit` on `main`/`development`.
 
 ### 4.3 Leakage suite (P3, master "Leakage tests")
 
@@ -111,15 +111,26 @@ forbidden_modules = sd_contracts sd_features sd_labeling sd_models sd_backtest s
 - **pydantic ↔ TS:** a round-trip fixture per channel payload is validated in Python and type-checked in TS (`tsc` on a fixture file).
 - **WS envelope fuzzing:** hypothesis generates malformed client ops. The consumer must answer with error frames and never crash or join an unintended group.
 
-### 4.5 CI workflows (`.github/workflows/`)
+### 4.5 Local quality gate (no GitHub Actions)
 
-| Workflow | Trigger | Jobs |
+GitHub Actions is **not used** (no minutes). The gate runs locally, in three layers:
+
+| Layer | When | What |
 |---|---|---|
-| `ci.yml` | push / PR | `lint` (ruff, pyright, eslint, tsc), `structural` (import-linter + `tests/structural`), `py-unit`, `py-db` (Timescale + Redis services), `web-unit` (vitest), `contracts` (drift) |
-| `integration.yml` | PR to main, nightly | Compose `offline` profile: fake gateway (1 recorded trading day at 60×) → ingest → dispatcher → inference → WS assertions, plus Playwright E2E and visual regression |
-| `leakage.yml` | Nightly + PRs touching `sd_features`/`sd_labeling`/`sd_backtest` | Leakage suite on a fixture dataset |
+| Edit-time guard | Every Claude edit/command | `.claude/hooks/guard_invariants.py` (invariants + no `git commit` on `main`/`development`) |
+| **`just check`** | `/wp-done`, and automatically on every push | `lint` (ruff, pyright, eslint, `tsc`), `structural` (import-linter + `tests/structural`), Python unit tests, web unit tests (vitest), `contracts` drift. **Target < 2 min** |
+| **`.githooks/pre-push`** | Every `git push` | Runs `just check` and blocks the push on failure (before the justfile exists, it runs `tests/structural` only). Enabled by `just hooks` (`git config core.hooksPath .githooks`). Never bypassed with `--no-verify` |
 
-The gateway runs on Windows only in production, but in CI its unit tests run on Linux using fake MT5. An optional `windows-latest` job checks that `sd_gateway` imports and that its tests pass with the real package installed (but no terminal).
+Heavier suites run on demand, and `/wp-done` runs whichever a WP names:
+
+| Target | Runs | Needs |
+|---|---|---|
+| `just test-db` | DB tests against real Timescale + Redis | compose `db`, `redis` |
+| `just test-integration` | Compose `offline` profile: fake gateway (1 recorded trading day at 60×) → ingest → dispatcher → inference → WS assertions | compose offline profile |
+| `just test-leakage` | The leakage suite (§4.3) on a fixture dataset. **Run before closing any WP touching `sd_features`/`sd_labeling`/`sd_models`/`sd_backtest`** | none |
+| `just test-e2e` | Playwright E2E + visual regression against the offline profile | compose offline profile |
+
+The gateway runs on Windows only in production. Its unit tests run against fake MT5, so no terminal is needed. A real-package import check is a manual step on the Windows host.
 
 ### 4.6 Model governance (master "Model governance")
 
@@ -136,28 +147,29 @@ On success, it moves the `champion` alias, writes a `PromotionRecord`, and publi
 
 | ID | Task | Est. h | Pri | Phase | Depends on | Acceptance criteria |
 |---|---|---|---|---|---|---|
-| X2-WP01 | **Test harness:** pytest config + markers, pytest-django test settings, factories, Timescale/Redis fixtures, Vitest/MSW base config | 2 | M | P1 | F1-WP03 | `just test` runs unit + db tests locally and in CI |
+| X2-WP01 | **Test harness:** pytest config + markers, pytest-django test settings, factories, Timescale/Redis fixtures, Vitest/MSW base config | 2 | M | P1 | F1-WP03 | `just test` runs the unit tests and `just test-db` runs the db tests, both locally |
 | X2-WP02 | **Structural contracts:** `.importlinter`, `tests/structural/*` (no-order, deliberate-only, no-secrets, gateway-no-django) | 2 | M | P1 | F1-WP01 | Each contract fails when a deliberate violation is introduced (verified once, then reverted) |
-| X2-WP03 | **CI workflow `ci.yml`:** lint, structural, py-unit, py-db (service containers), web-unit, caching of uv/pnpm | 3 | M | P1 | X2-WP01, X2-WP02 | Green on main; under 10 min |
-| X2-WP04 | **Contract + WS tests:** drift check, round-trip fixtures, hypothesis fuzzing of client ops | 2 | S | P1 | F1-WP08, F1-WP04 | Changing a schema without regenerating fails CI |
+| X2-WP03 | **Local quality gate (replaces CI):** `just check` (lint, structural, py-unit, web-unit, contracts drift), `just hooks`, `.githooks/pre-push`, the `just test-db/test-integration/test-leakage/test-e2e` targets, runbook section. **No GitHub Actions** | 3 | M | P1 | X2-WP01, X2-WP02 | `just check` green in < 2 min; the pre-push hook blocks a push when a structural test fails (shown once with a deliberate violation, then reverted) |
+| X2-WP04 | **Contract + WS tests:** drift check, round-trip fixtures, hypothesis fuzzing of client ops | 2 | S | P1 | F1-WP08, F1-WP04 | Changing a schema without regenerating fails `just check` |
 | X2-WP05 | **Recorded fixtures:** curated Parquet recordings (1 trading day × 3 symbols) from P0, fixture loader, fake-gateway compose profile wiring for tests | 2 | S | P1 | P0-WP07, F2-WP06 | Fixtures load in < 2 s; fake gateway replays them deterministically |
-| X2-WP06 | **Integration job:** `integration.yml` with compose offline profile, end-to-end assertions (bars persisted, signal emitted, WS frames received) | 4 | M | P2 | X2-WP05, P2-WP08 | Job green nightly; a broken ingestor makes it fail |
+| X2-WP06 | **Integration suite, run locally:** `just test-integration` using the compose offline profile, with end-to-end assertions (bars persisted, signal emitted, WS frames received) | 4 | M | P2 | X2-WP05, P2-WP08 | `just test-integration` is green locally; a broken ingestor makes it fail |
 | X2-WP07 | **Playwright E2E + visual regression:** login → symbol page live chart → signal appears and resolves; chart screenshots on fixed fixtures | 3 | M | P2 | X2-WP06, P2-WP10 | E2E green; visual diffs reviewed on change |
-| X2-WP08 | **Leakage suite:** all tests in 4.3, `leakage.yml` workflow | 4 | M | P3 | P3-WP01, P3-WP05, P3-WP09 | Suite green; bypassed-guard canary is detected |
+| X2-WP08 | **Leakage suite:** all tests in 4.3, run via `just test-leakage` | 4 | M | P3 | P3-WP01, P3-WP05, P3-WP09 | `just test-leakage` green; bypassed-guard canary is detected |
 | X2-WP09 | **Promotion gate:** `promote_model` command with the 4 checks, PromotionRecord, alias move + reload, failure reasons | 3 | M | P3 | P3-WP11, P3-WP13 | Promotion without holdout artifacts is refused; a successful promotion switches live inference |
 
 **Totals:** P1 = 11 h · P2 = 7 h · P3 = 7 h
 
 ## 6. Testing
 
-This plan *is* the testing plan. Its own correctness check: every contract and structural test is shown to **fail on a deliberate violation** once, in the PR that adds it.
+This plan *is* the testing plan. Its own correctness check: every contract and structural test is shown to **fail on a deliberate violation** once, on the branch that adds it.
 
 ## 7. Exit criteria
 
 There is no master exit criterion for X2 itself. It supports every phase. Measurable checks:
 
-- [ ] The four structural guarantees (no order code, MT5 only in the gateway, deliberate-only advisor, no secrets to the browser) are enforced in CI from Phase 1, with advisor rules active once X1 lands.
-- [ ] CI runs fully without an MT5 terminal and without spending API tokens.
+- [ ] The four structural guarantees (no order code, MT5 only in the gateway, deliberate-only advisor, no secrets to the browser) are enforced by the local gate (`just check` + pre-push hook) from Phase 1, with advisor rules active once X1 lands.
+- [ ] The gate runs fully without an MT5 terminal and without spending API tokens.
+- [ ] No `.github/workflows/` directory exists while Actions is unavailable.
 - [ ] The leakage suite and promotion gate are active before the first champion is promoted (P3).
 
 ## 8. Risks and mitigations
@@ -165,10 +177,23 @@ There is no master exit criterion for X2 itself. It supports every phase. Measur
 | Risk | Mitigation |
 |---|---|
 | Flaky timing tests (WS, streams) | Deterministic fake-gateway clock. Assert on eventual state with timeouts, not sleeps |
-| Slow CI from Timescale/compose | Split jobs. Integration runs on PRs to main and nightly, not every push |
+| Slow gate (every push runs it) | Keep `just check` to the fast suites (< 2 min). Timescale/compose and leakage suites run via their own `just test-*` targets, on demand |
+| Local-only gate can be skipped (`--no-verify`, or a clone without the hook) | `just hooks` in the runbook, a CLAUDE.md rule forbidding `--no-verify`, `/wp-done` running `just check` independently, and the edit-time guard. Re-enable GitHub Actions (Appendix A) when minutes allow, for a gate that can't be skipped |
 | Structural tests bypassed by dynamic imports (`importlib`) | The AST test also flags `importlib.import_module` / `__import__` with string literals containing `anthropic`, `sd_advisor` or `MetaTrader5` |
 
 ## 9. Open questions / verify at build time
 
 - Whether import-linter's version supports the `include_external_packages` option and wildcard modules. If not, keep explicit lists, with the AST test as the backstop.
-- Whether GitHub Actions minutes are needed. Everything can run locally with `just ci` if the repo stays private and offline.
+- Whether and when to re-enable GitHub Actions (see Appendix A). Today everything runs locally through `just check`.
+
+## Appendix A — Deferred: GitHub Actions workflows
+
+**Not in use** (no Actions minutes). Kept as the design to adopt later, together with the steps in [ADR 0002](../decisions/0002-branching-and-local-quality-gate.md). Each workflow would call the same `just` targets as the local gate, so nothing changes in the code.
+
+| Workflow | Trigger | Jobs |
+|---|---|---|
+| `ci.yml` | push / PR | `lint` (ruff, pyright, eslint, tsc), `structural` (import-linter + `tests/structural`), `py-unit`, `py-db` (Timescale + Redis services), `web-unit` (vitest), `contracts` (drift) |
+| `integration.yml` | PR to `main`, nightly | Compose `offline` profile: fake gateway (1 recorded trading day at 60×) → ingest → dispatcher → inference → WS assertions, plus Playwright E2E and visual regression |
+| `leakage.yml` | Nightly + PRs touching `sd_features`/`sd_labeling`/`sd_backtest` | Leakage suite on a fixture dataset |
+
+An optional `windows-latest` job could check that `sd_gateway` imports and that its tests pass with the real `MetaTrader5` package installed (but no terminal).

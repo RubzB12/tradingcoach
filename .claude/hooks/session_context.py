@@ -73,6 +73,9 @@ def main() -> int:
     print("SignalDeck session context")
     print(f"- Current phase: {current_phase(r)}")
     print(f"- Git branch: {branch}" + (f" ({dirty_count} uncommitted change(s))" if dirty_count else ""))
+    if branch in ("main", "development"):
+        print(f"- WARNING: on protected branch `{branch}`. Commits here are blocked. Create a branch before editing "
+              "(/wp-start <WP-ID>, or `git switch -c chore/<slug>` from development).")
     print("- In progress: " + ("; ".join(doing) if doing else "none - start one with /wp-start <WP-ID>"))
     if blocked:
         print("- Blocked: " + "; ".join(blocked))

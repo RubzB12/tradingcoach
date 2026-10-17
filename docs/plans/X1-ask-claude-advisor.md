@@ -238,7 +238,7 @@ The prompt is versioned (`PROMPT_VERSION`) and stored on each request.
 | X1-WP04 | v1 | **Cost + budget + reuse:** usage → USD, estimate priors, reserve → settle budget logic, daily/monthly caps, reuse key | 2.5 | M | X1-WP01 | Cost matches hand calculation from recorded usage; a reservation exceeding the cap is rejected; identical re-ask hits reuse |
 | X1-WP05 | v1 | **`advisor` Django app:** models + admin, `/estimate`, `/ask` (SSE, gates, shielded persistence), `/history`, `/requests/{id}`, `/usage` | 4 | M | X1-WP02–WP04, F1-WP05 | Closing the browser mid-stream still records usage/cost; `/ask` without a fresh estimate is rejected when skip-preview is off |
 | X1-WP06 | v1 | **Frontend v1:** AskClaudeButton (disabled states), PreviewDrawer (chips, token counts, effort, estimate, budget meter, reuse view), ReadingAnimation, ResultCard, history tab, `lib/sse.ts` | 6 | M | X1-WP05, F3-WP03 | Full flow from the symbol page and from a signal card; button disables at the cap |
-| X1-WP07 | v1 | **Advisor tests v1:** deliberate-only AST test, packet-never-contains-secrets test, token-budget golden test, schema validation, cost calc, fake-client end-to-end through `/ask`, `NEXT_PUBLIC_` secret grep | 2.5 | M | X1-WP05 | All green in CI with zero API spend |
+| X1-WP07 | v1 | **Advisor tests v1:** deliberate-only AST test, packet-never-contains-secrets test, token-budget golden test, schema validation, cost calc, fake-client end-to-end through `/ask`, `NEXT_PUBLIC_` secret grep | 2.5 | M | X1-WP05 | All green in `just check` with zero API spend |
 | X1-WP08 | v2 | **Packet v2:** signal section with calibrated prob, SHAP top-8, regime, dispersion; track_record section | 2.5 | M | P3-WP12, P3-WP13 | Golden packet updated; still ≤ 12K tokens |
 | X1-WP09 | v2 | **Modes v2:** Bull vs bear, Trade check (trade-plan form + server `trade_calcs`), What would change your mind, Post-mortem (resolved-signal section); prompts | 4 | M | X1-WP08, P2-WP09 | Trade check flags a plan whose min-lot risk exceeds your risk setting; post-mortem available on resolved cards |
 | X1-WP10 | v2 | **Evidence links + Show on chart:** evidence validator surfaced in UI, target registry → pane/region pulse, `DashedLevels` primitive | 3.5 | M | X1-WP06, F3-WP06 | Clicking a reason pulses the right pane; Claude's levels render visually distinct from the model's |
@@ -256,7 +256,7 @@ The prompt is versioned (`PROMPT_VERSION`) and stored on each request.
 
 ## 6. Testing (see [X2](X2-testing-quality-governance.md))
 
-These are master "Advisor (Ask Claude)" tests, all running on CI with **zero token spend** via `FakeAdvisorClient`:
+These are master "Advisor (Ask Claude)" tests, all running locally in `just check` with **zero token spend** via `FakeAdvisorClient`:
 
 - fake client replaying recorded responses
 - response-schema validation
@@ -275,7 +275,7 @@ These are master "Advisor (Ask Claude)" tests, all running on CI with **zero tok
 - [ ] **v1:** An identical repeat click is served from reuse at $0.
 - [ ] **v1:** The system prefix is cached across asks (`cache_read_input_tokens > 0`).
 - [ ] **v1:** Reaching the daily cap disables the button and the server returns 402.
-- [ ] **v1:** All advisor CI tests are green.
+- [ ] **v1:** All advisor tests are green in `just check`.
 - [ ] **v2 (Phase 3):** All v2 modes work. Evidence links and "Show on chart" work. ≥ 20 Claude stances are paper-tracked, and the agreement panel is live.
 - [ ] **v3 (Phase 5):** Opt-in news/web search, Compare, batch review, invalidation→alert and screenshot all work behind their toggles. The prompt-injection test is green.
 

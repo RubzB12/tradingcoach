@@ -15,7 +15,7 @@ paths:
   2. Run `just contracts`.
   3. Commit both the Python and the generated `apps/web/lib/contracts/{api,ws}.ts`.
 
-  CI fails on drift.
+  `just check` fails on drift.
 - **Never hand-edit** `apps/web/lib/contracts/*`. A permission rule denies it, and the hook guard blocks it.
 - **Server→client envelope is fixed:** `{channel, symbol, tf, seq, ts, payload}`. To add a channel, add a new `channel` literal and payload model. Never overload an existing payload.
 - **Client→server ops:** `subscribe`, `unsubscribe` and `ping` only. Validate them; an invalid op gets an error frame and must never crash the consumer or add it to a group.

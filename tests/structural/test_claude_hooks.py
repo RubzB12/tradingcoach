@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import unittest
@@ -18,9 +19,16 @@ SESSION = ROOT / ".claude" / "hooks" / "session_context.py"
 FAKE_KEY = "sk-" + "ant-" + "a1b2c3d4e5" * 4  # assembled so this file never contains a literal key
 
 
-def run_guard(payload: dict | str, *args: str) -> subprocess.CompletedProcess[str]:
+PRE_PUSH = ROOT / ".githooks" / "pre-push"
+
+
+def run_guard(payload: dict | str, *args: str, branch: str = "chore/test", merging: bool = False) -> subprocess.CompletedProcess[str]:
+    """Run the guard with a pinned branch so results don't depend on the checked-out branch."""
     stdin = payload if isinstance(payload, str) else json.dumps(payload)
-    env = {**os.environ, "CLAUDE_PROJECT_DIR": str(ROOT)}
+    env = {**os.environ, "CLAUDE_PROJECT_DIR": str(ROOT), "SIGNALDECK_GUARD_BRANCH": branch}
+    env.pop("SIGNALDECK_GUARD_MERGING", None)
+    if merging:
+        env["SIGNALDECK_GUARD_MERGING"] = "1"
     return subprocess.run([sys.executable, str(GUARD), *args], input=stdin, capture_output=True, text=True, env=env, timeout=10)
 
 
@@ -137,6 +145,71 @@ class GuardTests(unittest.TestCase):
 
     def test_malformed_input_is_non_blocking(self) -> None:
         self.assertEqual(run_guard("not json").returncode, 1)
+
+
+class BranchProtectionTests(unittest.TestCase):
+    """`git commit` is blocked on main/development; work goes through wp/ or chore/ branches."""
+
+    COMMIT_FORMS = [
+        "git commit -m 'feat(P0-WP01): x'",
+        "git add -A && git commit -m \"msg\"",
+        "git commit --amend --no-edit",
+        "git -C . commit -m x",
+        "git -c user.name=x commit -m x",
+        "git add . ; git commit -m x",
+    ]
+    NOT_COMMITS = [
+        "git merge --no-ff wp/P0-WP01-x -m \"merge(P0-WP01): commit the work\"",
+        "git log --oneline",
+        "git status",
+        "git switch -c chore/x",
+        "git push -u origin development",
+        "echo done",
+    ]
+
+    def test_commit_blocked_on_protected_branches(self) -> None:
+        for branch in ("main", "development"):
+            for cmd in self.COMMIT_FORMS:
+                with self.subTest(branch=branch, cmd=cmd):
+                    res = run_guard(command(cmd), "--command", branch=branch)
+                    self.assertEqual(res.returncode, 2, res.stderr)
+                    self.assertIn("is blocked", res.stderr)
+
+    def test_commit_allowed_on_work_branches(self) -> None:
+        for branch in ("wp/P1-WP02-ingest-streams", "chore/development-workflow", "feature/x"):
+            for cmd in self.COMMIT_FORMS:
+                with self.subTest(branch=branch, cmd=cmd):
+                    self.assertEqual(run_guard(command(cmd), "--command", branch=branch).returncode, 0)
+
+    def test_commit_allowed_while_concluding_a_merge(self) -> None:
+        res = run_guard(command("git commit --no-edit"), "--command", branch="development", merging=True)
+        self.assertEqual(res.returncode, 0, res.stderr)
+
+    def test_other_git_commands_never_blocked(self) -> None:
+        for branch in ("main", "development"):
+            for cmd in self.NOT_COMMITS:
+                with self.subTest(branch=branch, cmd=cmd):
+                    self.assertEqual(run_guard(command(cmd), "--command", branch=branch).returncode, 0)
+
+    def test_powershell_commit_blocked(self) -> None:
+        res = run_guard(command("git commit -m 'x'", "PowerShell"), "--command", branch="development")
+        self.assertEqual(res.returncode, 2, res.stderr)
+
+
+class PrePushHookTests(unittest.TestCase):
+    def test_hook_exists_and_has_valid_shell_syntax(self) -> None:
+        self.assertTrue(PRE_PUSH.exists(), ".githooks/pre-push is missing")
+        sh = shutil.which("sh")
+        if sh is None:
+            self.skipTest("sh not available")
+        res = subprocess.run([sh, "-n", str(PRE_PUSH)], capture_output=True, text=True, timeout=10)
+        self.assertEqual(res.returncode, 0, res.stderr)
+
+    def test_hook_runs_the_local_gate_and_forbids_bypass(self) -> None:
+        text = PRE_PUSH.read_text(encoding="utf-8")
+        self.assertIn("just check", text)
+        self.assertIn("unittest discover -s tests/structural", text)
+        self.assertIn("exit 1", text)  # a failing gate must block the push
 
 
 class SessionContextTests(unittest.TestCase):
