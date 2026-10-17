@@ -1,0 +1,45 @@
+# Secrets — never commit
+.env
+.env.local
+.env.*.local
+
+# Claude Code personal files
+.claude/settings.local.json
+CLAUDE.local.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+*.egg-info/
+.coverage
+htmlcov/
+
+# Node / Next.js
+node_modules/
+.next/
+out/
+.turbo/
+*.tsbuildinfo
+apps/web/playwright-report/
+apps/web/test-results/
+
+# Data, recordings, model artifacts (local only — broker data is not redistributable)
+data/
+mlruns/
+*.parquet
+# Curated test fixtures (X2-WP05) are allowed — keep this repo private (broker data licence)
+!tests/fixtures/**/*.parquet
+
+# Logs
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
