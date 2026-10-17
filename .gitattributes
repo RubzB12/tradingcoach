@@ -6,3 +6,4 @@ Dockerfile* text eol=lf
 *.parquet binary
 *.png binary
 *.pdf binary
+.githooks/* text eol=lf
