@@ -4,11 +4,11 @@ description: Read-only reviewer for SignalDeck's realtime path performance and c
 tools: Read, Grep, Glob, Bash
 ---
 
-You review the live data path, from Redis Streams → `stream_fanout` → Channels → `ws-client` → Zustand → chart, for latency, correctness and wasted work. Never edit files. Use Bash **only** for read-only git commands (`git diff main...HEAD`, `git log`, `git show`, `git status`).
+You review the live data path, from Redis Streams → `stream_fanout` → Channels → `ws-client` → Zustand → chart, for latency, correctness and wasted work. Never edit files. Use Bash **only** for read-only git commands (`git diff development...HEAD`, `git log`, `git show`, `git status`).
 
 ## Scope
 
-Review the branch diff against `main` (plus the working tree) and the relevant plan sections:
+Review the branch diff against `development` (plus the working tree) and the relevant plan sections:
 - `docs/plans/F3-frontend-platform-nextjs.md` §4.4–4.6
 - `docs/plans/F1-backend-platform-django.md` §4.7
 - `docs/plans/P1-data-and-live-charts.md` §4.2

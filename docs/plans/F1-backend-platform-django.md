@@ -23,7 +23,7 @@ The master plan was written for FastAPI. This plan replaces it with Django and k
 - MT5 access ([F2](F2-mt5-gateway.md))
 - Frontend ([F3](F3-frontend-platform-nextjs.md))
 - Domain models for bars/signals/etc. (in the phase plans)
-- CI workflow and test harness ([X2](X2-testing-quality-governance.md))
+- Local quality gate (`just check`, pre-push hook) and test harness ([X2](X2-testing-quality-governance.md)). There is no GitHub CI
 - Prefect (moved to [P4](P4-deep-learning-foundation-models.md))
 
 ## 3. Dependencies
@@ -81,7 +81,6 @@ signaldeck/  (= this project folder)
 ├─ data/                      # git-ignored: lake/, recordings/, mlflow-artifacts/
 ├─ docs/                      # plans/, runbook.md, reports/, decisions/
 ├─ tests/                     # cross-package + integration tests (X2)
-├─ .github/workflows/
 ├─ pyproject.toml             # uv workspace root
 ├─ pnpm-workspace.yaml
 └─ justfile
@@ -111,7 +110,7 @@ Python packages use the `sd_` prefix so they have distinct top-level import name
 | `fanout` | `python manage.py stream_fanout` | — | P1 |
 | `dispatcher` | `python manage.py bar_close_dispatcher` | — | P2 |
 | `paper` | `python manage.py paper_tracker` | — | P2 |
-| `fake-gateway` | `python -m sd_gateway --impl fake` | — | Profile `ci`/`offline` (F2-WP06) |
+| `fake-gateway` | `python -m sd_gateway --impl fake` | — | Profile `offline` (F2-WP06) |
 
 On Windows, the real gateway runs **natively** and connects to `localhost:6379` (the published Redis port). The browser reaches Next.js on `:3000`, which proxies to `:8000`.
 
@@ -157,7 +156,7 @@ On Windows, the real gateway runs **natively** and connects to `localhost:6379` 
 - `just contracts` does three things:
   1. Exports the JSON Schema from `sd_contracts`. It runs `json-schema-to-typescript` to produce `apps/web/lib/contracts/ws.ts`.
   2. Dumps the Ninja OpenAPI. It runs `openapi-typescript` to produce `apps/web/lib/contracts/api.ts`.
-  3. Fails if the git diff is non-empty in CI (drift check, [X2-WP04](X2-testing-quality-governance.md#5-work-packages)).
+  3. `just check` fails if the generated files differ from the committed ones (drift check, [X2-WP04](X2-testing-quality-governance.md#5-work-packages)).
 - Ninja schemas reuse `sd_contracts` models wherever the shape is shared, so there is one source of truth.
 
 ## 5. Work packages
@@ -172,7 +171,7 @@ On Windows, the real gateway runs **natively** and connects to `localhost:6379` 
 | F1-WP06 | **Celery:** `config/celery.py`, queues, beat schedule in code, compose `worker` + `beat` services, `core.tasks.ping` | 2.5 | M | WP02, WP03 | `ping.delay()` round-trips, and beat logs the scheduled heartbeat task |
 | F1-WP07 | **Timescale helpers:** `CreateHypertable`, `AddCompressionPolicy`, `AddRetentionPolicy`, `CreateContinuousAggregate` migration ops, `core.db.copy_rows` with staging upsert | 3 | M | WP03 | A test migration creates a hypertable, and 100k rows insert via `copy_rows` in < 2 s locally with duplicates upserted |
 | F1-WP08 | **Contract pipeline:** `sd_contracts` package with envelope + stream message models, JSON Schema export, `openapi-typescript` + `json-schema-to-typescript`, `just contracts` | 3 | M | WP04, WP05 | The generated TS types compile in `apps/web`, and changing a pydantic field changes the TS output |
-| F1-WP09 | **justfile + runbook:** `up/down/dev/web/gateway/migrate/test/contracts/lint/fmt/shell`, plus `docs/runbook.md` (first-time setup on Windows, ports, troubleshooting) | 1 | M | WP01–WP08 | A fresh setup can be done following only the runbook |
+| F1-WP09 | **justfile + runbook:** `up/down/dev/web/gateway/migrate/test/contracts/lint/fmt/shell` (the `check`, `hooks` and `test-*` targets come from [X2-WP03](X2-testing-quality-governance.md#5-work-packages)), plus `docs/runbook.md` (first-time setup on Windows, ports, troubleshooting) | 1 | M | WP01–WP08 | A fresh setup can be done following only the runbook |
 | F1-WP10 | **Structured logging:** `structlog` JSON logs, request-ID middleware, log correlation for WS and Celery, rotating files in `data/logs` | 1.5 | S | WP03 | One request ID can be traced from an HTTP log to the Celery task logs |
 
 **Totals:** Phase 1 = 24 h · Phase 2 = 1.5 h
@@ -181,8 +180,8 @@ On Windows, the real gateway runs **natively** and connects to `localhost:6379` 
 
 - `pytest-django` smoke tests: settings load, `/health` responds, and admin login works.
 - A Channels `WebsocketCommunicator` test for the subscribe/unsubscribe/ping flow and envelope validation.
-- Migration-op tests run against a real Timescale service container (CI).
-- Contract drift check in CI ([X2-WP04](X2-testing-quality-governance.md#5-work-packages)).
+- Migration-op tests run against a real Timescale container (`just test-db`).
+- Contract drift check in `just check` ([X2-WP04](X2-testing-quality-governance.md#5-work-packages)).
 
 ## 7. Exit criteria
 

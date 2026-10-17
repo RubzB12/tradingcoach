@@ -6,16 +6,23 @@ Modes
 default      Write/Edit hook: scans the new text against the target file path.
 --command    Bash/PowerShell hook: scans write-like commands (redirects, heredocs,
              Set-Content, ...) for banned tokens. Read-only commands are never blocked.
+             Also blocks `git commit` while `main` or `development` is checked out
+             (all work goes through wp/<ID>-* or chore/<slug> branches; see CLAUDE.md).
 
 Exit codes: 0 = allow, 2 = block (stderr is shown to Claude as the reason),
-1 = guard error (non-blocking). CI structural tests (X2-WP02) remain authoritative;
-this guard is the fast, edit-time layer. Stdlib only.
+1 = guard error (non-blocking). The structural tests run by `just check` (X2-WP02/WP03)
+and the pre-push hook remain authoritative; this guard is the fast, edit-time layer.
+There is no GitHub CI. Stdlib only.
+
+Test-only overrides (the hook's own environment, which Claude cannot set):
+SIGNALDECK_GUARD_BRANCH, SIGNALDECK_GUARD_MERGING=1.
 """
 from __future__ import annotations
 
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -151,8 +158,43 @@ def check_file(rel: str, text: str) -> list[str]:
     return v
 
 
-def check_command(cmd: str) -> list[str]:
-    v: list[str] = []
+PROTECTED_BRANCHES = ("main", "development")
+GIT_COMMIT_RE = re.compile(r"\bgit\b(?:\s+-\S+(?:\s+[^\s-]\S*)?)*\s+commit\b")
+
+
+def _git(root: Path, *args: str) -> str:
+    try:
+        out = subprocess.run(["git", *args], cwd=root, capture_output=True, text=True, timeout=3)
+        return out.stdout.strip() if out.returncode == 0 else ""
+    except (OSError, subprocess.SubprocessError):
+        return ""
+
+
+def current_branch(root: Path) -> str:
+    return os.environ.get("SIGNALDECK_GUARD_BRANCH") or _git(root, "rev-parse", "--abbrev-ref", "HEAD")
+
+
+def is_merging(root: Path) -> bool:
+    """True while a (conflicted) merge is being concluded; `git commit` is then legitimate."""
+    if os.environ.get("SIGNALDECK_GUARD_MERGING") == "1":
+        return True
+    git_dir = _git(root, "rev-parse", "--git-dir")
+    return bool(git_dir) and (root / git_dir / "MERGE_HEAD").exists()
+
+
+def check_branch_protection(cmd: str, root: Path) -> list[str]:
+    if not GIT_COMMIT_RE.search(cmd):
+        return []
+    branch = current_branch(root)
+    if branch in PROTECTED_BRANCHES and not is_merging(root):
+        return [f"`git commit` on `{branch}` is blocked: all work goes through a branch. Create one first "
+                f"(`/wp-start <WP-ID>` for a work package, or `git switch -c chore/<slug>` from `development`), "
+                f"commit there, then merge into `development` with `--no-ff` after the user approves."]
+    return []
+
+
+def check_command(cmd: str, root: Path | None = None) -> list[str]:
+    v: list[str] = check_branch_protection(cmd, root or repo_root({}))
     stripped = cmd.lstrip()
     if stripped.startswith("git ") or not WRITE_CMD_RE.search(cmd):
         return v  # read-only or git (commit messages may legitimately mention the bans)
@@ -179,7 +221,7 @@ def main() -> int:
     tool_input = payload.get("tool_input") or {}
 
     if "--command" in sys.argv[1:]:
-        violations = check_command(str(tool_input.get("command") or ""))
+        violations = check_command(str(tool_input.get("command") or ""), repo_root(payload))
     else:
         rel = rel_path(str(tool_input.get("file_path") or tool_input.get("notebook_path") or ""), repo_root(payload))
         if rel is None:

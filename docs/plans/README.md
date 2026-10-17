@@ -41,6 +41,8 @@ These sub-plans turn the master plan (**`SignalDeck_Project_Plan.pdf`, Rev 2, 17
 1. **Move the repo out of OneDrive** (e.g. `C:\dev\signaldeck`), or exclude `.venv`, `node_modules` and `data/` from sync. OneDrive file locking breaks uv/pnpm installs and Docker volumes. See [F1 §8](F1-backend-platform-django.md#8-risks-and-mitigations).
 2. Copy the master PDF into `docs/`.
 3. Install Docker Desktop (WSL2 backend), uv, pnpm, just, Git, and the MT5 terminal + a broker demo account.
+4. **Branching:** `development` is the integration branch and all work lands there; `main` is updated only at phase boundaries. Cut `wp/<WP-ID>-<slug>` or `chore/<slug>` branches from `development`. Commits directly on `development`/`main` are blocked.
+5. **Quality gate (there is no GitHub CI):** enable the pre-push hook with `git config core.hooksPath .githooks` (`just hooks` once the justfile exists). From then on every push runs `just check`.
 
 ## Dependency graph
 
@@ -95,6 +97,8 @@ flowchart LR
 | D12 | Gateway | Plain Python (`sd_gateway`), **never imports Django**, native Windows Python 3.12 | F2 |
 | D13 | Foundation models in the main env | Separate **fm-worker** image/uv project (`sd_fm`) on Celery queue `fm` | P4 §4.1 |
 | D14 | "FinBERT or LLM scoring" for news | FinBERT or **local** Ollama only. Claude is never automatic (deliberate-only) | P5 §4.3 |
+| D15 | GitHub Actions CI (`ci.yml`, `integration.yml`, `leakage.yml`) | **No GitHub Actions** (no minutes). Local quality gate: `just check` + `.githooks/pre-push`, heavier suites via `just test-*`. Workflow designs kept as a deferred appendix | X2 §4.5, Appendix A; [ADR 0002](../decisions/0002-branching-and-local-quality-gate.md) |
+| D16 | Single trunk (implicit `main`) | **`development` integration branch**; WP branches merge into it with `--no-ff`; `main` promoted only at phase boundaries; no direct commits on either | [ADR 0002](../decisions/0002-branching-and-local-quality-gate.md), CLAUDE.md Git |
 
 ## Traceability matrix (master plan → sub-plan WPs)
 

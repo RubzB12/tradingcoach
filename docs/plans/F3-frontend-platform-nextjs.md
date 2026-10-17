@@ -121,7 +121,7 @@ next.config.ts                # rewrites → Django
 | F3-WP05 | **Zustand stores:** ticks (ring buffer), bars (per symbol/tf, forming bar), signals, health, ui (persisted with try/catch) | 2 | M | WP04 | 1,000 ticks/s synthetic load causes no React re-renders in unrelated components (React Profiler) |
 | F3-WP06 | **Chart wrapper:** `chart-core` controller, rAF ≤ 30 fps loop, panes, resize, theme, `<PriceChart>`, primitive interface + one sample primitive (horizontal band) | 4 | M | WP05 | With synthetic 50 ticks/s, the chart stays smooth and the main thread is < 30% busy (Performance panel) |
 | F3-WP07 | **System UX:** LazyMotion + shared variants, Sonner, cmdk palette (symbol search), `HealthBanner`, `ConnectionDot` | 2 | S | WP04 | The banner appears within 10 s of stopping the gateway, and ⌘K finds symbols |
-| F3-WP08 | **Frontend test setup:** Vitest + Testing Library config, MSW for REST mocks, a mock WS server helper, Playwright config targeting the compose `offline` profile | 2 | S | WP01 | `pnpm test` and `pnpm e2e` run in CI (X2-WP03) |
+| F3-WP08 | **Frontend test setup:** Vitest + Testing Library config, MSW for REST mocks, a mock WS server helper, Playwright config targeting the compose `offline` profile | 2 | S | WP01 | `pnpm test` runs in `just check` and `pnpm e2e` via `just test-e2e` (X2-WP03) |
 
 **Totals:** Phase 1 = 20 h
 

@@ -3,7 +3,7 @@ name: wp-start
 description: Start a SignalDeck work package — load its plan and acceptance criteria, check dependencies in TRACKER.md, create the wp/ branch and mark it doing. Use when the user says to start or implement a WP ID such as P1-WP02.
 argument-hint: <WP-ID, e.g. P1-WP02>
 disable-model-invocation: true
-allowed-tools: Read, Grep, Glob, Edit, Bash(git status *), Bash(git status), Bash(git switch *), Bash(git checkout -b wp/*), Bash(git branch *), Bash(git rev-parse *)
+allowed-tools: Read, Grep, Glob, Edit, Bash(git status *), Bash(git status), Bash(git switch *), Bash(git checkout -b wp/*), Bash(git branch *), Bash(git rev-parse *), Bash(git fetch *), Bash(git fetch), Bash(git pull --ff-only), Bash(git pull --ff-only *)
 ---
 
 # Start work package `$ARGUMENTS`
@@ -27,7 +27,9 @@ Follow these steps in order. Stop and report to the user if any step fails.
 
 4. **Prepare git.**
    - Run `git status`. If the tree has uncommitted changes, stop and ask the user how to handle them. Never stash or discard on your own.
-   - Create and switch to `wp/<WP-ID>-<short-kebab-slug>`, with the slug taken from the task title (≤ 5 words). If that branch already exists, switch to it.
+   - `development` is the integration branch, and **WP branches are always cut from it**. Run `git switch development` and then `git pull --ff-only` (if it can't fast-forward, stop and report, and never merge or reset on your own).
+   - Create and switch to `wp/<WP-ID>-<short-kebab-slug>` from `development`, with the slug taken from the task title (≤ 5 words). If that branch already exists, switch to it instead, because the work is being resumed.
+   - Never start work on `main` or `development` itself. Commits there are blocked by the guard hook.
 
 5. **Mark it started.** In `TRACKER.md`, set this WP's Status to `doing` and Started to today's date (YYYY-MM-DD). Change nothing else.
 
